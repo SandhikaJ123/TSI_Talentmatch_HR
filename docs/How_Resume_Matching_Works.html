@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Resume Matching Works - Complete Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 50px;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.5em;
+            margin: 25px 0 15px 0;
+        }
+        
+        .step-card {
+            background: #f8f9fa;
+            border-left: 5px solid #667eea;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .step-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 40px;
+            height: 40px;
+            line-height: 40px;
+            text-align: center;
+            border-radius: 50%;
+            font-weight: bold;
+            margin-right: 15px;
+            font-size: 1.2em;
+        }
+        
+        .formula {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            text-align: center;
+        }
+        
+        .example {
+            background: #d1ecf1;
+            border: 2px solid #17a2b8;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+        
+        .example h4 {
+            color: #0c5460;
+            margin-bottom: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .score-bar {
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: width 0.3s ease;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin: 5px;
+        }
+        
+        .badge-excellent { background: #28a745; color: white; }
+        .badge-good { background: #17a2b8; color: white; }
+        .badge-fair { background: #ffc107; color: #333; }
+        .badge-poor { background: #dc3545; color: white; }
+        
+        .flow-diagram {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .flow-box {
+            background: white;
+            border: 3px solid #667eea;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            flex: 1;
+            margin: 10px;
+            min-width: 150px;
+        }
+        
+        .flow-arrow {
+            font-size: 2em;
+            color: #667eea;
+            margin: 0 10px;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #e83e8c;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border-left: 5px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        ul, ol {
+            margin-left: 30px;
+            margin-top: 10px;
+        }
+        
+        li {
+            margin: 8px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .flow-diagram {
+                flex-direction: column;
+            }
+            
+            .flow-arrow {
+                transform: rotate(90deg);
+                margin: 10px 0;
+            }
+            
+            header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 How Resume Matching Works</h1>
+            <p>A Complete Guide to Parsing, Validating, Scoring, Ranking & Explaining</p>
+        </header>
+        
+        <div class="content">
+
+            <!-- OVERVIEW -->
+            <div class="section">
+                <h2>📋 Overview</h2>
+                <p>Our resume matching system analyzes job descriptions and candidate resumes to find the best matches. The process involves 5 main steps:</p>
+                
+                <div class="flow-diagram">
+                    <div class="flow-box">
+                        <strong>1. Parse</strong><br>
+                        Extract text from files
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-box">
+                        <strong>2. Validate</strong><br>
+                        Check data quality
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-box">
+                        <strong>3. Score</strong><br>
+                        Calculate match scores
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-box">
+                        <strong>4. Rank</strong><br>
+                        Sort by best match
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-box">
+                        <strong>5. Explain</strong><br>
+                        Show why they match
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 1: PARSING -->
+            <div class="section">
+                <h2>📄 Step 1: Parsing (Extracting Information)</h2>
+                
+                <div class="step-card">
+                    <span class="step-number">1</span>
+                    <strong>What is Parsing?</strong>
+                    <p>Parsing means reading a document (PDF, DOCX, TXT) and extracting the text content so we can analyze it.</p>
+                </div>
+
+                <h3>How We Parse Documents:</h3>
+                <table>
+                    <tr>
+                        <th>File Type</th>
+                        <th>Method</th>
+                        <th>What We Extract</th>
+                    </tr>
+                    <tr>
+                        <td><strong>PDF</strong></td>
+                        <td>pdf-parse library</td>
+                        <td>All text content, preserving structure</td>
+                    </tr>
+                    <tr>
+                        <td><strong>DOCX</strong></td>
+                        <td>mammoth library</td>
+                        <td>Text with basic formatting</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TXT</strong></td>
+                        <td>Direct read</td>
+                        <td>Plain text as-is</td>
+                    </tr>
+                </table>
+
+                <div class="example">
+                    <h4>📝 Example: Parsing a Resume</h4>
+                    <p><strong>Input:</strong> resume.pdf</p>
+                    <p><strong>Output:</strong></p>
+                    <code style="display: block; white-space: pre-wrap; background: white; padding: 15px; margin-top: 10px;">
+John Doe
+Software Engineer
+Email: john@example.com
+Phone: (555) 123-4567
+
+EXPERIENCE:
+Senior Developer at Tech Corp (2020-2023)
+- Built React applications
+- Led team of 5 developers
+- Implemented CI/CD pipelines
+
+SKILLS:
+JavaScript, React, Node.js, Python, AWS, Docker
+                    </code>
+                </div>
+
+                <h3>What We Extract from Job Descriptions:</h3>
+                <ul>
+                    <li><strong>Job Title:</strong> "Senior Software Engineer"</li>
+                    <li><strong>Required Skills:</strong> JavaScript, React, Node.js, AWS</li>
+                    <li><strong>Experience Required:</strong> 5+ years</li>
+                    <li><strong>Education Level:</strong> Bachelor's degree</li>
+                    <li><strong>Responsibilities:</strong> List of duties</li>
+                    <li><strong>Nice-to-Have Skills:</strong> Docker, Kubernetes</li>
+                </ul>
+            </div>
+
+            <!-- STEP 2: VALIDATION -->
+            <div class="section">
+                <h2>✅ Step 2: Validation (Checking Quality)</h2>
+                
+                <div class="step-card">
+                    <span class="step-number">2</span>
+                    <strong>What is Validation?</strong>
+                    <p>Validation ensures the extracted data is complete, accurate, and usable for matching.</p>
+                </div>
+
+                <h3>What We Validate:</h3>
+                
+                <table>
+                    <tr>
+                        <th>Check</th>
+                        <th>Pass Criteria</th>
+                        <th>Fail Example</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Minimum Length</strong></td>
+                        <td>At least 100 characters</td>
+                        <td>Resume with only name and email</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Has Skills</strong></td>
+                        <td>At least 1 skill detected</td>
+                        <td>Resume with no technical skills</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Readable Text</strong></td>
+                        <td>Valid UTF-8 encoding</td>
+                        <td>Corrupted or image-only PDF</td>
+                    </tr>
+                    <tr>
+                        <td><strong>File Size</strong></td>
+                        <td>Under 10MB</td>
+                        <td>50MB PDF file</td>
+                    </tr>
+                </table>
+
+                <div class="info-box">
+                    <strong>💡 Why Validation Matters:</strong>
+                    <p>Without validation, we might try to match incomplete or corrupted data, leading to inaccurate results. Validation ensures we only process high-quality information.</p>
+                </div>
+            </div>
+
+            <!-- STEP 3: SCORING -->
+            <div class="section">
+                <h2>🎯 Step 3: Scoring (Calculating Match Quality)</h2>
+                
+                <div class="step-card">
+                    <span class="step-number">3</span>
+                    <strong>What is Scoring?</strong>
+                    <p>Scoring calculates how well a resume matches the job requirements. We use a weighted formula that considers multiple factors.</p>
+                </div>
+
+                <h3>Scoring Methods Available:</h3>
+                
+                <div class="step-card" style="border-left-color: #28a745;">
+                    <strong>🔹 Hybrid Mode (Recommended)</strong>
+                    <p>Combines rule-based scoring with AI semantic understanding</p>
+                    <ul>
+                        <li>75% Rule-based (skills, experience, education)</li>
+                        <li>25% Semantic similarity (AI embeddings)</li>
+                        <li>Fast, consistent, and cost-effective</li>
+                    </ul>
+                </div>
+
+                <div class="step-card" style="border-left-color: #17a2b8;">
+                    <strong>🔹 NLP Mode (Fastest)</strong>
+                    <p>Pure rule-based matching using natural language processing</p>
+                    <ul>
+                        <li>100% Rule-based</li>
+                        <li>No API required, fully offline</li>
+                        <li>Instant results</li>
+                    </ul>
+                </div>
+
+                <div class="step-card" style="border-left-color: #6f42c1;">
+                    <strong>🔹 AI Mode (Most Detailed)</strong>
+                    <p>Full GPT-4o analysis for detailed insights</p>
+                    <ul>
+                        <li>100% AI-powered</li>
+                        <li>Detailed explanations</li>
+                        <li>Slower and more expensive</li>
+                    </ul>
+                </div>
+
+                <h3>The Scoring Formula:</h3>
+                
+                <div class="formula">
+                    Final Score = (Skills × 40%) + (Experience × 25%) + (Education × 20%) + (Overall × 15%)
+                </div>
+
+                <p><strong>Default Weights (Customizable):</strong></p>
+                <ul>
+                    <li><span class="highlight">Skills: 40%</span> - Most important factor</li>
+                    <li><span class="highlight">Experience: 25%</span> - Years of relevant work</li>
+                    <li><span class="highlight">Education: 20%</span> - Degree level</li>
+                    <li><span class="highlight">Overall Match: 15%</span> - Keyword density & semantic fit</li>
+                </ul>
+
+                <h3>How Each Component is Scored:</h3>
+
+                <div class="step-card">
+                    <h4>1️⃣ Skills Score (0-100)</h4>
+                    <div class="formula">
+                        Skills Score = (Matched Skills / Required Skills) × 100
+                    </div>
+                    <p><strong>Example:</strong></p>
+                    <ul>
+                        <li>Job requires: JavaScript, React, Node.js, AWS, Docker (5 skills)</li>
+                        <li>Resume has: JavaScript, React, Node.js, Python (4 skills, 3 match)</li>
+                        <li>Score: (3 / 5) × 100 = <strong>60%</strong></li>
+                    </ul>
+                    
+                    <p><strong>Bonus Features:</strong></p>
+                    <ul>
+                        <li>✅ Synonym detection (React = ReactJS = React.js)</li>
+                        <li>✅ Skill frequency bonus (mentioned multiple times)</li>
+                        <li>✅ Certification bonus (+10 points for AWS Certified, etc.)</li>
+                    </ul>
+                </div>
+
+                <div class="step-card">
+                    <h4>2️⃣ Experience Score (0-100)</h4>
+                    <div class="formula">
+                        Experience Score = min(100, (Candidate Years / Required Years) × 100)
+                    </div>
+                    <p><strong>Example:</strong></p>
+                    <ul>
+                        <li>Job requires: 5 years</li>
+                        <li>Candidate has: 7 years</li>
+                        <li>Score: (7 / 5) × 100 = <strong>100%</strong> (capped at 100)</li>
+                    </ul>
+                    
+                    <p><strong>How We Detect Experience:</strong></p>
+                    <ul>
+                        <li>"5+ years of experience"</li>
+                        <li>"Senior Developer (2018-2023)" → 5 years</li>
+                        <li>"Minimum 3 years required"</li>
+                    </ul>
+                </div>
+
+                <div class="step-card">
+                    <h4>3️⃣ Education Score (0-100)</h4>
+                    <table style="margin-top: 15px;">
+                        <tr>
+                            <th>Education Level</th>
+                            <th>Score</th>
+                        </tr>
+                        <tr><td>PhD / Doctorate</td><td>100</td></tr>
+                        <tr><td>Master's Degree</td><td>85</td></tr>
+                        <tr><td>Bachelor's Degree</td><td>70</td></tr>
+                        <tr><td>Associate Degree</td><td>50</td></tr>
+                        <tr><td>Diploma</td><td>35</td></tr>
+                        <tr><td>Certification</td><td>25</td></tr>
+                        <tr><td>Not Detected</td><td>0</td></tr>
+                    </table>
+                </div>
+
+                <div class="step-card">
+                    <h4>4️⃣ Overall Match Score (0-100)</h4>
+                    <p>Uses <strong>TF-IDF</strong> (Term Frequency-Inverse Document Frequency) to measure keyword relevance:</p>
+                    <ul>
+                        <li>Extracts important terms from job description</li>
+                        <li>Checks how many appear in the resume</li>
+                        <li>Weights terms by importance (rare terms score higher)</li>
+                    </ul>
+                    
+                    <p><strong>In Hybrid Mode:</strong> Also includes semantic similarity using AI embeddings (25% weight)</p>
+                </div>
+
+                <div class="example">
+                    <h4>📊 Complete Scoring Example</h4>
+                    <p><strong>Job Requirements:</strong></p>
+                    <ul>
+                        <li>Skills: JavaScript, React, Node.js, AWS, Docker</li>
+                        <li>Experience: 5 years</li>
+                        <li>Education: Bachelor's degree</li>
+                    </ul>
+                    
+                    <p><strong>Candidate Resume:</strong></p>
+                    <ul>
+                        <li>Skills: JavaScript, React, Node.js, Python (3/5 match)</li>
+                        <li>Experience: 6 years</li>
+                        <li>Education: Master's degree</li>
+                    </ul>
+                    
+                    <p><strong>Individual Scores:</strong></p>
+                    <ul>
+                        <li>Skills: 60% (3 out of 5 matched)</li>
+                        <li>Experience: 100% (6 years ≥ 5 years required)</li>
+                        <li>Education: 85% (Master's degree)</li>
+                        <li>Overall: 75% (good keyword match)</li>
+                    </ul>
+                    
+                    <div class="formula">
+                        Final Score = (60 × 0.40) + (100 × 0.25) + (85 × 0.20) + (75 × 0.15)
+                        <br>
+                        = 24 + 25 + 17 + 11.25
+                        <br>
+                        = <strong>77.25% → 77%</strong>
+                    </div>
+                    
+                    <div class="score-bar">
+                        <div class="score-fill" style="width: 77%;">77% - Good Match</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: RANKING -->
+            <div class="section">
+                <h2>🏆 Step 4: Ranking (Sorting Candidates)</h2>
+                
+                <div class="step-card">
+                    <span class="step-number">4</span>
+                    <strong>What is Ranking?</strong>
+                    <p>After scoring all candidates, we sort them from highest to lowest score to identify the best matches.</p>
+                </div>
+
+                <h3>Ranking Process:</h3>
+                <ol>
+                    <li><strong>Calculate final scores</strong> for all candidates</li>
+                    <li><strong>Sort descending</strong> (highest score first)</li>
+                    <li><strong>Assign grades</strong> based on score ranges</li>
+                    <li><strong>Group by quality</strong> for easy filtering</li>
+                </ol>
+
+                <h3>Grade System:</h3>
+                <table>
+                    <tr>
+                        <th>Score Range</th>
+                        <th>Grade</th>
+                        <th>Badge</th>
+                        <th>Meaning</th>
+                    </tr>
+                    <tr>
+                        <td>85-100</td>
+                        <td>Excellent</td>
+                        <td><span class="badge badge-excellent">Excellent</span></td>
+                        <td>Perfect or near-perfect match</td>
+                    </tr>
+                    <tr>
+                        <td>70-84</td>
+                        <td>Good</td>
+                        <td><span class="badge badge-good">Good</span></td>
+                        <td>Strong match, worth interviewing</td>
+                    </tr>
+                    <tr>
+                        <td>55-69</td>
+                        <td>Fair</td>
+                        <td><span class="badge badge-fair">Fair</span></td>
+                        <td>Decent match, some gaps</td>
+                    </tr>
+                    <tr>
+                        <td>40-54</td>
+                        <td>Below Average</td>
+                        <td><span class="badge" style="background: #fd7e14; color: white;">Below Avg</span></td>
+                        <td>Weak match, significant gaps</td>
+                    </tr>
+                    <tr>
+                        <td>0-39</td>
+                        <td>Poor</td>
+                        <td><span class="badge badge-poor">Poor</span></td>
+                        <td>Not a good fit</td>
+                    </tr>
+                </table>
+
+                <div class="example">
+                    <h4>📊 Ranking Example</h4>
+                    <p><strong>5 Candidates Scored:</strong></p>
+                    <table>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Name</th>
+                            <th>Score</th>
+                            <th>Grade</th>
+                            <th>Skills Match</th>
+                        </tr>
+                        <tr style="background: #d4edda;">
+                            <td><strong>1</strong></td>
+                            <td>Alice Johnson</td>
+                            <td><strong>92%</strong></td>
+                            <td><span class="badge badge-excellent">Excellent</span></td>
+                            <td>5/5 skills</td>
+                        </tr>
+                        <tr style="background: #d1ecf1;">
+                            <td><strong>2</strong></td>
+                            <td>Bob Smith</td>
+                            <td><strong>78%</strong></td>
+                            <td><span class="badge badge-good">Good</span></td>
+                            <td>4/5 skills</td>
+                        </tr>
+                        <tr style="background: #d1ecf1;">
+                            <td><strong>3</strong></td>
+                            <td>Carol Davis</td>
+                            <td><strong>74%</strong></td>
+                            <td><span class="badge badge-good">Good</span></td>
+                            <td>4/5 skills</td>
+                        </tr>
+                        <tr style="background: #fff3cd;">
+                            <td><strong>4</strong></td>
+                            <td>David Lee</td>
+                            <td><strong>61%</strong></td>
+                            <td><span class="badge badge-fair">Fair</span></td>
+                            <td>3/5 skills</td>
+                        </tr>
+                        <tr style="background: #f8d7da;">
+                            <td><strong>5</strong></td>
+                            <td>Eve Martinez</td>
+                            <td><strong>45%</strong></td>
+                            <td><span class="badge" style="background: #fd7e14; color: white;">Below Avg</span></td>
+                            <td>2/5 skills</td>
+                        </tr>
+                    </table>
+                    
+                    <p><strong>Recommendation:</strong> Interview Alice (92%), Bob (78%), and Carol (74%)</p>
+                </div>
+
+                <div class="info-box">
+                    <strong>💡 Pro Tip:</strong>
+                    <p>Focus on candidates scoring 70% or higher. They have the core skills and experience needed for the role.</p>
+                </div>
+            </div>
+
+            <!-- STEP 5: EXPLAINING -->
+            <div class="section">
+                <h2>💬 Step 5: Explaining (Why They Match)</h2>
+                
+                <div class="step-card">
+                    <span class="step-number">5</span>
+                    <strong>What is Explaining?</strong>
+                    <p>For each candidate, we provide a detailed breakdown showing exactly why they received their score.</p>
+                </div>
+
+                <h3>What We Explain:</h3>
+
+                <div class="step-card">
+                    <h4>1. Matched Skills</h4>
+                    <p>Skills the candidate has that match the job requirements:</p>
+                    <div style="margin-top: 10px;">
+                        <span class="badge" style="background: #28a745; color: white;">✓ JavaScript</span>
+                        <span class="badge" style="background: #28a745; color: white;">✓ React</span>
+                        <span class="badge" style="background: #28a745; color: white;">✓ Node.js</span>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <h4>2. Missing Skills</h4>
+                    <p>Skills the job requires but the candidate doesn't have:</p>
+                    <div style="margin-top: 10px;">
+                        <span class="badge" style="background: #dc3545; color: white;">✗ AWS</span>
+                        <span class="badge" style="background: #dc3545; color: white;">✗ Docker</span>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <h4>3. Strengths</h4>
+                    <p>What makes this candidate stand out:</p>
+                    <ul>
+                        <li>✅ 7 years of experience (exceeds 5 year requirement)</li>
+                        <li>✅ Master's degree in Computer Science</li>
+                        <li>✅ Led team of 5 developers</li>
+                        <li>✅ AWS Certified Solutions Architect</li>
+                    </ul>
+                </div>
+
+                <div class="step-card">
+                    <h4>4. Weaknesses</h4>
+                    <p>Areas where the candidate falls short:</p>
+                    <ul>
+                        <li>⚠️ No Docker experience mentioned</li>
+                        <li>⚠️ Limited cloud infrastructure experience</li>
+                    </ul>
+                </div>
+
+                <div class="step-card">
+                    <h4>5. Summary</h4>
+                    <p>A 2-3 sentence professional assessment:</p>
+                    <div class="info-box" style="margin-top: 10px;">
+                        <em>"Alice Johnson is an excellent match with a 92% score. She has all core technical skills including JavaScript, React, and Node.js, plus 7 years of relevant experience. Her Master's degree and AWS certification make her a strong candidate, though she could benefit from Docker training."</em>
+                    </div>
+                </div>
+
+                <div class="example">
+                    <h4>📋 Complete Explanation Example</h4>
+                    <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #667eea;">
+                        <h3 style="color: #667eea; margin-bottom: 15px;">Alice Johnson - 92% Match</h3>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <strong>📊 Score Breakdown:</strong>
+                            <div style="margin-top: 10px;">
+                                <div style="margin: 8px 0;">
+                                    <span style="display: inline-block; width: 120px;">Skills:</span>
+                                    <div class="score-bar" style="display: inline-block; width: 200px; height: 20px;">
+                                        <div class="score-fill" style="width: 100%; font-size: 0.8em;">100%</div>
+                                    </div>
+                                </div>
+                                <div style="margin: 8px 0;">
+                                    <span style="display: inline-block; width: 120px;">Experience:</span>
+                                    <div class="score-bar" style="display: inline-block; width: 200px; height: 20px;">
+                                        <div class="score-fill" style="width: 100%; font-size: 0.8em;">100%</div>
+                                    </div>
+                                </div>
+                                <div style="margin: 8px 0;">
+                                    <span style="display: inline-block; width: 120px;">Education:</span>
+                                    <div class="score-bar" style="display: inline-block; width: 200px; height: 20px;">
+                                        <div class="score-fill" style="width: 85%; font-size: 0.8em;">85%</div>
+                                    </div>
+                                </div>
+                                <div style="margin: 8px 0;">
+                                    <span style="display: inline-block; width: 120px;">Overall:</span>
+                                    <div class="score-bar" style="display: inline-block; width: 200px; height: 20px;">
+                                        <div class="score-fill" style="width: 88%; font-size: 0.8em;">88%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <strong>✅ Matched Skills (5/5):</strong><br>
+                            <span class="badge" style="background: #28a745; color: white;">JavaScript</span>
+                            <span class="badge" style="background: #28a745; color: white;">React</span>
+                            <span class="badge" style="background: #28a745; color: white;">Node.js</span>
+                            <span class="badge" style="background: #28a745; color: white;">AWS</span>
+                            <span class="badge" style="background: #28a745; color: white;">Docker</span>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <strong>❌ Missing Skills:</strong><br>
+                            <span style="color: #6c757d; font-style: italic;">None - All required skills present!</span>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <strong>💪 Strengths:</strong>
+                            <ul>
+                                <li>7 years of experience (exceeds 5 year requirement)</li>
+                                <li>Master's degree in Computer Science</li>
+                                <li>AWS Certified Solutions Architect</li>
+                                <li>Led team of 5 developers</li>
+                                <li>Experience with CI/CD pipelines</li>
+                            </ul>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <strong>⚠️ Weaknesses:</strong>
+                            <ul>
+                                <li>Could benefit from more Kubernetes experience</li>
+                            </ul>
+                        </div>
+
+                        <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #2196F3;">
+                            <strong>📝 Summary:</strong><br>
+                            <em>Alice Johnson is an excellent match with a 92% score. She possesses all required technical skills including JavaScript, React, Node.js, AWS, and Docker, with 7 years of relevant experience. Her Master's degree and AWS certification demonstrate strong technical foundation and commitment to professional development. She has proven leadership experience managing a team of 5 developers and implementing modern DevOps practices.</em>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADVANCED FEATURES -->
+            <div class="section">
+                <h2>🚀 Advanced Features</h2>
+
+                <div class="step-card">
+                    <h3>1. Semantic Similarity (Hybrid Mode)</h3>
+                    <p>Uses AI embeddings to understand meaning beyond keywords:</p>
+                    <ul>
+                        <li><strong>Example:</strong> "Machine Learning" matches "AI" and "Neural Networks"</li>
+                        <li><strong>How it works:</strong> Converts text to 1536-dimensional vectors</li>
+                        <li><strong>Benefit:</strong> Catches related skills not explicitly mentioned</li>
+                    </ul>
+                </div>
+
+                <div class="step-card">
+                    <h3>2. Skill Synonyms</h3>
+                    <p>Recognizes different ways to write the same skill:</p>
+                    <table style="margin-top: 10px;">
+                        <tr>
+                            <th>Skill</th>
+                            <th>Recognized As</th>
+                        </tr>
+                        <tr><td>JavaScript</td><td>JS, ECMAScript, ES6, ES2015</td></tr>
+                        <tr><td>React</td><td>ReactJS, React.js</td></tr>
+                        <tr><td>Node.js</td><td>Node, NodeJS</td></tr>
+                        <tr><td>PostgreSQL</td><td>Postgres, PSQL</td></tr>
+                        <tr><td>Kubernetes</td><td>K8s</td></tr>
+                    </table>
+                </div>
+
+                <div class="step-card">
+                    <h3>3. Certification Bonus</h3>
+                    <p>Adds bonus points for relevant certifications:</p>
+                    <ul>
+                        <li>AWS Certified: +10 points</li>
+                        <li>Azure Certified: +10 points</li>
+                        <li>GCP Certified: +10 points</li>
+                        <li>PMP: +8 points</li>
+                        <li>Scrum Master: +5 points</li>
+                        <li>CISSP: +10 points</li>
+                    </ul>
+                    <p><em>Maximum bonus: 15 points</em></p>
+                </div>
+
+                <div class="step-card">
+                    <h3>4. Data Anonymization (Privacy)</h3>
+                    <p>When using AI mode, personal information is removed before sending to OpenAI:</p>
+                    <ul>
+                        <li>Email addresses → [EMAIL_1], [EMAIL_2]</li>
+                        <li>Phone numbers → [PHONE_1], [PHONE_2]</li>
+                        <li>Addresses → [ADDRESS_1]</li>
+                        <li>Company names → [COMPANY_1] (optional)</li>
+                    </ul>
+                    <p><strong>Why?</strong> Protects candidate privacy while still allowing accurate matching.</p>
+                </div>
+            </div>
+
+            <!-- COMPARISON TABLE -->
+            <div class="section">
+                <h2>⚖️ Matching Mode Comparison</h2>
+                
+                <table>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Hybrid (Recommended)</th>
+                        <th>NLP Only</th>
+                        <th>AI (GPT-4o)</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Speed</strong></td>
+                        <td>⚡ Fast (~100ms)</td>
+                        <td>⚡⚡ Very Fast (~50ms)</td>
+                        <td>🐌 Slow (2-5s)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cost</strong></td>
+                        <td>💰 Low ($0.02/1M)</td>
+                        <td>🆓 Free</td>
+                        <td>💰💰💰 High ($2.50/1M)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consistency</strong></td>
+                        <td>✅ 100% Deterministic</td>
+                        <td>✅ 100% Deterministic</td>
+                        <td>⚠️ Variable</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Semantic Understanding</strong></td>
+                        <td>✅ Good</td>
+                        <td>⚠️ Limited</td>
+                        <td>✅ Excellent</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Offline Support</strong></td>
+                        <td>⚠️ Needs embeddings</td>
+                        <td>✅ Fully offline</td>
+                        <td>❌ Requires API</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Explainability</strong></td>
+                        <td>✅ Fully transparent</td>
+                        <td>✅ Fully transparent</td>
+                        <td>⚠️ Black box</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Accuracy</strong></td>
+                        <td>⭐⭐⭐⭐ 80-85%</td>
+                        <td>⭐⭐⭐ 70-75%</td>
+                        <td>⭐⭐⭐⭐⭐ 85-90%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Best For</strong></td>
+                        <td>Most use cases</td>
+                        <td>High volume, offline</td>
+                        <td>Detailed analysis</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- FAQ -->
+            <div class="section">
+                <h2>❓ Frequently Asked Questions</h2>
+
+                <div class="step-card">
+                    <h4>Q: Can I adjust the scoring weights?</h4>
+                    <p><strong>A:</strong> Yes! You can customize the weights for Skills, Experience, Education, and Overall match. Just make sure they add up to 100%.</p>
+                </div>
+
+                <div class="step-card">
+                    <h4>Q: What if a resume doesn't have all required skills?</h4>
+                    <p><strong>A:</strong> The candidate will still be scored, but their Skills score will be lower. They might still rank well if they excel in Experience and Education.</p>
+                </div>
+
+                <div class="step-card">
+                    <h4>Q: How accurate is the experience detection?</h4>
+                    <p><strong>A:</strong> Very accurate for standard formats like "5+ years" or "2018-2023". May miss unusual formats or implicit experience.</p>
+                </div>
+
+                <div class="step-card">
+                    <h4>Q: Can I see the raw scores for each component?</h4>
+                    <p><strong>A:</strong> Yes! Click on any candidate card to see the detailed breakdown of Skills, Experience, Education, and Overall scores.</p>
+                </div>
+
+                <div class="step-card">
+                    <h4>Q: What's the difference between "matched" and "missing" skills?</h4>
+                    <p><strong>A:</strong> <strong>Matched skills</strong> are those the candidate has that the job requires. <strong>Missing skills</strong> are required by the job but not found in the resume.</p>
+                </div>
+
+                <div class="step-card">
+                    <h4>Q: Why use Hybrid mode instead of AI mode?</h4>
+                    <p><strong>A:</strong> Hybrid mode is faster, cheaper, and more consistent while still providing semantic understanding. AI mode is best when you need very detailed explanations.</p>
+                </div>
+            </div>
+
+            <!-- FOOTER -->
+            <div style="background: #f8f9fa; padding: 30px; text-align: center; border-top: 3px solid #667eea; margin-top: 50px;">
+                <h3 style="color: #667eea; margin-bottom: 15px;">🎯 Ready to Start Matching?</h3>
+                <p style="color: #6c757d; margin-bottom: 20px;">Upload your job description and resumes to see the matching system in action!</p>
+                <div style="margin-top: 20px; padding: 20px; background: white; border-radius: 10px; display: inline-block;">
+                    <p style="margin: 0; color: #333;"><strong>💡 Pro Tip:</strong> Start with Hybrid mode for the best balance of speed, accuracy, and cost.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

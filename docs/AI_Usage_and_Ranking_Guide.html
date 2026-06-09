@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Resume Matching: How It Works</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', 'Times New Roman', Times, serif;
+            line-height: 1.8;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.25);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 50px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 15s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        header h1 {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        header .subtitle {
+            font-size: 1.4em;
+            opacity: 0.95;
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 60px 50px;
+        }
+        
+        .section {
+            margin-bottom: 70px;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 4px solid #667eea;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.8em;
+            margin: 35px 0 20px 0;
+            font-weight: 600;
+        }
+        
+        .section h4 {
+            color: #555;
+            font-size: 1.4em;
+            margin: 25px 0 15px 0;
+            font-weight: 500;
+        }
+        
+        .icon {
+            font-size: 1.2em;
+        }
+        
+        .intro-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 16px;
+            padding: 35px;
+            margin: 30px 0;
+            font-size: 1.15em;
+            line-height: 1.9;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+        
+        .card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 25px 0;
+            border-left: 6px solid #667eea;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        
+        .card h4 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+        
+        .three-column {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .feature-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+        }
+        
+        .feature-card .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .feature-card h4 {
+            color: #667eea;
+            margin: 15px 0;
+        }
+        
+        .formula-box {
+            background: linear-gradient(135deg, #fff5e6 0%, #ffe0b3 100%);
+            border: 3px solid #ff9800;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2em;
+            text-align: center;
+            box-shadow: 0 6px 18px rgba(255, 152, 0, 0.15);
+        }
+        
+        .formula-title {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            color: #e65100;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .formula-content {
+            font-size: 1.1em;
+            color: #333;
+            line-height: 2;
+        }
+        
+        .example-box {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border: 3px solid #2196F3;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 6px 18px rgba(33, 150, 243, 0.15);
+        }
+        
+        .example-box h4 {
+            color: #1565c0;
+            margin-top: 0;
+            font-size: 1.5em;
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-left: 6px solid #4caf50;
+            padding: 25px;
+            margin: 25px 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.1);
+        }
+        
+        .warning-box {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border-left: 6px solid #ff9800;
+            padding: 25px;
+            margin: 25px 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.1);
+        }
+        
+        .ai-box {
+            background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+            border-left: 6px solid #9c27b0;
+            padding: 25px;
+            margin: 25px 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.1);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            padding: 18px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 1.05em;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 8px 18px;
+            border-radius: 25px;
+            font-size: 0.95em;
+            font-weight: 600;
+            margin: 5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        
+        .badge-excellent { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+        .badge-good { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; }
+        .badge-fair { background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%); color: white; }
+        .badge-below { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; }
+        .badge-poor { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }
+        
+        .flow-diagram {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 40px 0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .flow-box {
+            background: white;
+            border: 3px solid #667eea;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            flex: 1;
+            min-width: 180px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transition: all 0.3s ease;
+        }
+        
+        .flow-box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+        }
+        
+        .flow-box strong {
+            display: block;
+            font-size: 1.2em;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+        
+        .flow-arrow {
+            font-size: 2.5em;
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .highlight {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            color: #92400e;
+        }
+        
+        code {
+            background: #f1f5f9;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            color: #e91e63;
+            font-size: 0.95em;
+        }
+        
+        ul, ol {
+            margin-left: 35px;
+            margin-top: 15px;
+        }
+        
+        li {
+            margin: 12px 0;
+            line-height: 1.8;
+        }
+        
+        .score-bar {
+            height: 40px;
+            background: #e9ecef;
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 15px 0;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: width 0.5s ease;
+        }
+        
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-weight: 700;
+            font-size: 1.4em;
+            margin-right: 20px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .process-step {
+            display: flex;
+            align-items: flex-start;
+            margin: 30px 0;
+            padding: 25px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        
+        @media (max-width: 1024px) {
+            .two-column, .three-column {
+                grid-template-columns: 1fr;
+            }
+            
+            .flow-diagram {
+                flex-direction: column;
+            }
+            
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2.2em;
+            }
+            
+            .content {
+                padding: 40px 25px;
+            }
+            
+            .section h2 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 AI-Powered Resume Matching</h1>
+            <p class="subtitle">How We Use Artificial Intelligence to Find the Perfect Candidates</p>
+        </header>
+        
+        <div class="content">
+
+            <!-- INTRODUCTION -->
+            <div class="section">
+                <h2><span class="icon">📋</span> Overview</h2>
+                <div class="intro-box">
+                    <p><strong>Welcome to our AI-powered resume matching system!</strong> This platform uses cutting-edge artificial intelligence and natural language processing to analyze resumes and match them with job requirements. Our hybrid approach combines the precision of rule-based algorithms with the intelligence of GPT-4, delivering accurate, explainable, and fair candidate rankings.</p>
+                </div>
+                
+                <h3>What Makes Our System Unique?</h3>
+                <div class="three-column">
+                    <div class="feature-card">
+                        <div class="icon">🎯</div>
+                        <h4>Hybrid Intelligence</h4>
+                        <p>Combines rule-based scoring (75%) with AI semantic understanding (25%) for the best of both worlds</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">🔍</div>
+                        <h4>Deep Analysis</h4>
+                        <p>AI extracts candidate information, identifies strengths/weaknesses, and provides detailed explanations</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">⚡</div>
+                        <h4>Fast & Reliable</h4>
+                        <p>Deterministic scoring ensures consistent results while AI provides rich insights</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HOW AI IS USED -->
+            <div class="section">
+                <h2><span class="icon">🤖</span> How We Use AI</h2>
+                
+                <p>Our system uses <strong>OpenAI's GPT-4</strong> and <strong>GPT-4o-mini</strong> models at multiple stages of the matching process. Here's exactly where and how AI powers our platform:</p>
+                
+                <h3>1. Candidate Information Extraction</h3>
+                <div class="ai-box">
+                    <h4>🔍 What AI Does:</h4>
+                    <p>AI analyzes the resume text and extracts key information that's often difficult to parse with traditional methods:</p>
+                    <ul>
+                        <li><strong>Full Name:</strong> Identifies the candidate's name (avoiding location names or company names)</li>
+                        <li><strong>Job Title:</strong> Extracts current or desired position (e.g., "Senior Full Stack Developer")</li>
+                        <li><strong>Location:</strong> Finds city and state information</li>
+                        <li><strong>Contact Info:</strong> Extracts email and phone number</li>
+                    </ul>
+                    <p><strong>Model Used:</strong> GPT-4o-mini (fast and cost-effective)</p>
+                    <p><strong>Why AI?</strong> Resume formats vary wildly. AI can understand context and extract information even from poorly formatted or creative resumes.</p>
+                </div>
+                
+                <h3>2. Strengths & Weaknesses Analysis</h3>
+                <div class="ai-box">
+                    <h4>💪 What AI Does:</h4>
+                    <p>For each candidate, AI generates a comprehensive analysis by comparing the resume against job requirements:</p>
+                    <ul>
+                        <li><strong>Strengths (3-5 points):</strong> Specific skills, experience, and achievements that make the candidate a good fit</li>
+                        <li><strong>Weaknesses (2-4 points):</strong> Gaps in skills or experience relative to job requirements</li>
+                        <li><strong>Professional Summary:</strong> 2-3 sentence assessment of overall fit</li>
+                    </ul>
+                    
+                    <div class="example-box">
+                        <h4>📝 Example AI Analysis</h4>
+                        <p><strong>Strengths:</strong></p>
+                        <ul>
+                            <li>Strong MERN stack experience with 5+ years of hands-on development</li>
+                            <li>Led team of 5 developers, demonstrating leadership capabilities</li>
+                            <li>AWS Certified Solutions Architect with proven cloud expertise</li>
+                            <li>Experience with CI/CD pipelines and DevOps practices</li>
+                        </ul>
+                        <p><strong>Weaknesses:</strong></p>
+                        <ul>
+                            <li>No Docker or Kubernetes experience mentioned</li>
+                            <li>Limited exposure to microservices architecture</li>
+                            <li>No mention of test-driven development practices</li>
+                        </ul>
+                        <p><strong>Summary:</strong> "Strong candidate with excellent MERN stack skills and leadership experience. AWS certification is a major plus. Would benefit from containerization training to meet all job requirements."</p>
+                    </div>
+                    
+                    <p><strong>Model Used:</strong> GPT-4o-mini</p>
+                    <p><strong>Why AI?</strong> AI can understand nuanced context, relate skills to job requirements, and provide human-like professional assessments.</p>
+                </div>
+                
+                <h3>3. Semantic Similarity (Hybrid Mode)</h3>
+                <div class="ai-box">
+                    <h4>🧠 What AI Does:</h4>
+                    <p>In hybrid mode, AI generates <strong>embeddings</strong> (mathematical representations) of both the job description and resumes:</p>
+                    <ul>
+                        <li><strong>Job Embedding:</strong> Converts job requirements into a 1536-dimensional vector</li>
+                        <li><strong>Resume Embeddings:</strong> Converts each resume into a comparable vector</li>
+                        <li><strong>Cosine Similarity:</strong> Measures how "close" the resume is to the job requirements in semantic space</li>
+                    </ul>
+                    
+                    <div class="formula-box">
+                        <div class="formula-title">Semantic Similarity Formula</div>
+                        <div class="formula-content">
+                            similarity = cosine(job_embedding, resume_embedding)<br>
+                            semantic_score = (similarity + 1) / 2 × 100
+                        </div>
+                    </div>
+                    
+                    <p><strong>Model Used:</strong> text-embedding-3-small (OpenAI's embedding model)</p>
+                    <p><strong>Why AI?</strong> Embeddings capture semantic meaning beyond keyword matching. For example, "React developer" and "Frontend engineer with React.js" are semantically similar even if words differ.</p>
+                </div>
+                
+                <h3>4. Detailed Candidate Insights</h3>
+                <div class="ai-box">
+                    <h4>💡 What AI Does:</h4>
+                    <p>When you click "Get AI Insights" on a candidate, GPT-4 generates a comprehensive report:</p>
+                    <ul>
+                        <li><strong>Overall Assessment:</strong> 2-3 sentence summary of fit</li>
+                        <li><strong>Score Breakdown Explanations:</strong> Why each score (skills, experience, education) was given</li>
+                        <li><strong>Key Strengths:</strong> Top 3 strengths</li>
+                        <li><strong>Areas of Concern:</strong> Weaknesses or gaps</li>
+                        <li><strong>Missing Critical Skills:</strong> Required skills not found in resume</li>
+                        <li><strong>Development Areas:</strong> Where candidate needs improvement</li>
+                        <li><strong>Recommendation:</strong> Should you interview, proceed, or reject?</li>
+                        <li><strong>Interview Focus Areas:</strong> Specific topics to probe during interview</li>
+                        <li><strong>Hiring Risk Assessment:</strong> Low/Medium/High risk with factors</li>
+                    </ul>
+                    
+                    <p><strong>Model Used:</strong> GPT-4o (most capable model)</p>
+                    <p><strong>Why AI?</strong> Provides human-like professional analysis that helps hiring managers make informed decisions.</p>
+                </div>
+                
+                <h3>5. Candidate Comparison</h3>
+                <div class="ai-box">
+                    <h4>⚖️ What AI Does:</h4>
+                    <p>When comparing 2-5 candidates, AI provides:</p>
+                    <ul>
+                        <li><strong>Summary:</strong> Overall comparison of all candidates</li>
+                        <li><strong>Top Recommendation:</strong> Best candidate with detailed reasoning</li>
+                        <li><strong>Detailed Ranking:</strong> Each candidate ranked with explanation</li>
+                        <li><strong>Category Comparison:</strong> Who's better in skills, experience, education, overall fit</li>
+                        <li><strong>Unique Strengths:</strong> What makes each candidate special</li>
+                        <li><strong>Final Recommendation:</strong> Hiring recommendation with reasoning</li>
+                        <li><strong>Alternative Scenarios:</strong> When would you choose a different candidate?</li>
+                    </ul>
+                    
+                    <p><strong>Model Used:</strong> GPT-4o</p>
+                    <p><strong>Why AI?</strong> AI can perform nuanced comparisons considering multiple factors simultaneously, just like an experienced recruiter.</p>
+                </div>
+                
+                <h3>6. Score Explanations</h3>
+                <div class="ai-box">
+                    <h4>🧮 What AI Does:</h4>
+                    <p>Click the brain icon (🧠) next to any score to get a quick AI explanation:</p>
+                    <ul>
+                        <li>Why was the skills score 75%?</li>
+                        <li>Why was the experience score 60%?</li>
+                        <li>Why was the education score 85%?</li>
+                        <li>Why was the overall fit score 70%?</li>
+                    </ul>
+                    
+                    <p><strong>Model Used:</strong> GPT-4o</p>
+                    <p><strong>Why AI?</strong> Provides instant, understandable explanations in plain English.</p>
+                </div>
+            </div>
+
+
+            <!-- RANKING SYSTEM -->
+            <div class="section">
+                <h2><span class="icon">🏆</span> How Ranking Works</h2>
+                
+                <p>Our ranking system uses a <strong>weighted scoring formula</strong> that evaluates candidates across four key dimensions. Here's the complete breakdown:</p>
+                
+                <h3>The Master Formula</h3>
+                <div class="formula-box">
+                    <div class="formula-title">Final Score Calculation</div>
+                    <div class="formula-content">
+                        Final Score = (Skills × 40%) + (Experience × 25%) + (Education × 20%) + (Overall Fit × 15%)
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <strong>💡 Why These Weights?</strong>
+                    <p>Skills are weighted highest (40%) because they're the most direct indicator of job performance. Experience (25%) and Education (20%) are important but secondary. Overall Fit (15%) captures semantic relevance and keyword density.</p>
+                    <p><strong>Note:</strong> These weights are customizable! Hiring managers can adjust them based on role requirements.</p>
+                </div>
+                
+                <h3>Component 1: Skills Score (40% weight)</h3>
+                <div class="card">
+                    <h4>🎯 How It's Calculated</h4>
+                    <p>Skills are the most critical factor. We use a sophisticated matching algorithm:</p>
+                    
+                    <div class="formula-box">
+                        <div class="formula-title">Skills Score Formula</div>
+                        <div class="formula-content">
+                            Coverage Score = (Matched Skills / Required Skills) × 100<br>
+                            Depth Score = Average frequency of matched skills × 20<br>
+                            Skills Score = (Coverage × 70%) + (Depth × 30%)
+                        </div>
+                    </div>
+                    
+                    <h4>Skill Matching Techniques:</h4>
+                    <ol>
+                        <li><strong>Exact Matching:</strong> Word-boundary-aware regex search for each skill</li>
+                        <li><strong>Synonym Detection:</strong> Recognizes variations (React = ReactJS = React.js)</li>
+                        <li><strong>Fuzzy Matching:</strong> Jaro-Winkler distance algorithm (threshold: 0.92) handles typos</li>
+                        <li><strong>Stemming:</strong> Porter Stemmer normalizes words (developing → develop)</li>
+                        <li><strong>Frequency Bonus:</strong> Skills mentioned multiple times score higher</li>
+                    </ol>
+                    
+                    <h4>Skill Categories Recognized:</h4>
+                    <table>
+                        <tr>
+                            <th>Category</th>
+                            <th>Examples</th>
+                        </tr>
+                        <tr>
+                            <td><strong>Languages</strong></td>
+                            <td>JavaScript, TypeScript, Python, Java, C++, Go, Rust, Swift, Kotlin</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Frontend</strong></td>
+                            <td>React, Angular, Vue, Next.js, Tailwind, Redux, GraphQL, Webpack</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Backend</strong></td>
+                            <td>Node.js, Express, Django, Flask, Spring Boot, NestJS, FastAPI</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Databases</strong></td>
+                            <td>SQL, MySQL, PostgreSQL, MongoDB, Redis, Elasticsearch, DynamoDB</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Cloud & DevOps</strong></td>
+                            <td>AWS, Azure, GCP, Docker, Kubernetes, Terraform, Jenkins, CI/CD</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Data Science</strong></td>
+                            <td>Machine Learning, TensorFlow, PyTorch, Pandas, NumPy, Spark</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Mobile</strong></td>
+                            <td>React Native, Flutter, Swift, Kotlin, Android, iOS</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Practices</strong></td>
+                            <td>Agile, Scrum, TDD, Design Patterns, Microservices, Git</td>
+                        </tr>
+                    </table>
+                    
+                    <div class="example-box">
+                        <h4>📊 Skills Scoring Example</h4>
+                        <p><strong>Job Requirements:</strong> JavaScript, React, Node.js, AWS, Docker, PostgreSQL (6 skills)</p>
+                        <p><strong>Candidate Resume:</strong> JavaScript (mentioned 3×), React (mentioned 5×), Node.js (mentioned 2×), Python (mentioned 1×)</p>
+                        
+                        <p><strong>Calculation:</strong></p>
+                        <ul>
+                            <li>Matched Skills: 3 (JavaScript, React, Node.js)</li>
+                            <li>Missing Skills: 3 (AWS, Docker, PostgreSQL)</li>
+                            <li>Coverage Score: (3 / 6) × 100 = 50%</li>
+                            <li>Depth Score: ((3+5+2)/3) × 20 = 66.7%</li>
+                            <li><strong>Final Skills Score: (50 × 0.7) + (66.7 × 0.3) = 55%</strong></li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <h3>Component 2: Experience Score (25% weight)</h3>
+                <div class="card">
+                    <h4>📅 How It's Calculated</h4>
+                    <p>Experience is extracted using multiple regex patterns that detect phrases like:</p>
+                    <ul>
+                        <li>"5+ years of experience"</li>
+                        <li>"Experience of 7 years"</li>
+                        <li>"3 years in software development"</li>
+                        <li>"Minimum 5 years required"</li>
+                    </ul>
+                    
+                    <div class="formula-box">
+                        <div class="formula-title">Experience Score Formula</div>
+                        <div class="formula-content">
+                            If Candidate Years ≥ Required Years:<br>
+                            Score = min(100, 100 + ((Candidate - Required) / Required) × 20)<br>
+                            <br>
+                            If Candidate Years < Required Years:<br>
+                            Score = (Candidate Years / Required Years) × 100
+                        </div>
+                    </div>
+                    
+                    <div class="example-box">
+                        <h4>📊 Experience Scoring Examples</h4>
+                        <table>
+                            <tr>
+                                <th>Required</th>
+                                <th>Candidate Has</th>
+                                <th>Calculation</th>
+                                <th>Score</th>
+                            </tr>
+                            <tr>
+                                <td>5 years</td>
+                                <td>7 years</td>
+                                <td>100 + ((7-5)/5) × 20 = 108 → capped</td>
+                                <td><span class="badge badge-excellent">100</span></td>
+                            </tr>
+                            <tr>
+                                <td>5 years</td>
+                                <td>5 years</td>
+                                <td>Exact match</td>
+                                <td><span class="badge badge-excellent">100</span></td>
+                            </tr>
+                            <tr>
+                                <td>5 years</td>
+                                <td>4 years</td>
+                                <td>(4/5) × 100</td>
+                                <td><span class="badge badge-good">80</span></td>
+                            </tr>
+                            <tr>
+                                <td>5 years</td>
+                                <td>3 years</td>
+                                <td>(3/5) × 100</td>
+                                <td><span class="badge badge-fair">60</span></td>
+                            </tr>
+                            <tr>
+                                <td>5 years</td>
+                                <td>1 year</td>
+                                <td>(1/5) × 100</td>
+                                <td><span class="badge badge-poor">20</span></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <h3>Component 3: Education Score (20% weight)</h3>
+                <div class="card">
+                    <h4>🎓 How It's Calculated</h4>
+                    <p>Education is scored based on the highest degree detected in the resume:</p>
+                    
+                    <table>
+                        <tr>
+                            <th>Education Level</th>
+                            <th>Keywords Detected</th>
+                            <th>Score</th>
+                        </tr>
+                        <tr>
+                            <td><strong>PhD / Doctorate</strong></td>
+                            <td>phd, ph.d, doctorate, doctoral</td>
+                            <td><span class="badge badge-excellent">100</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Master's Degree</strong></td>
+                            <td>master, mba, msc, m.sc, ms, meng</td>
+                            <td><span class="badge badge-excellent">85</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Bachelor's Degree</strong></td>
+                            <td>bachelor, bsc, b.sc, bs, beng, b.eng</td>
+                            <td><span class="badge badge-good">70</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Associate Degree</strong></td>
+                            <td>associate, a.s., a.a.</td>
+                            <td><span class="badge badge-fair">50</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Diploma</strong></td>
+                            <td>diploma, higher national</td>
+                            <td><span class="badge badge-below">35</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Certification</strong></td>
+                            <td>certification, certified, certificate</td>
+                            <td><span class="badge badge-below">25</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Not Detected</strong></td>
+                            <td>-</td>
+                            <td><span class="badge badge-poor">0</span></td>
+                        </tr>
+                    </table>
+                    
+                    <div class="info-box">
+                        <strong>💡 Certification Bonus:</strong>
+                        <p>Professional certifications can add bonus points:</p>
+                        <ul>
+                            <li>AWS Certified: +10 points</li>
+                            <li>Azure Certified: +10 points</li>
+                            <li>GCP Certified: +10 points</li>
+                            <li>PMP: +8 points</li>
+                            <li>Scrum Master (CSM/PSM): +5 points</li>
+                            <li>CISSP: +10 points</li>
+                            <li>CKA (Kubernetes): +8 points</li>
+                        </ul>
+                        <p>Maximum bonus: 15 points</p>
+                    </div>
+                </div>
