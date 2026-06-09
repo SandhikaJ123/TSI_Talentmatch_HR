@@ -38,12 +38,12 @@ server/build
 *.sw?
 
 # Environment variables
-.env
+# .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-client/.env
+# client/.env
 client/.env.local
 server/.env
 server/.env.local
