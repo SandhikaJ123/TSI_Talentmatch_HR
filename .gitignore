@@ -46,6 +46,7 @@ server/build
 client/.env
 client/.env.local
 server/.env
+server_py/.env
 server/.env.local
 
 # Java/Maven specific
