@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Process *)",
+      "PowerShell(Get-WmiObject *)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(Get-ChildItem -Recurse -Directory client -Depth 3 | Where-Object { $_.FullName -notmatch 'node_modules' } | Select-Object FullName)",
+      "Bash(tasklist //FI \"IMAGENAME eq python.exe\")",
+      "Bash(netstat -ano)",
+      "Bash(tasklist //FI \"IMAGENAME eq postgres.exe\")"
+    ]
+  }
+}

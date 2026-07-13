@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clear LocalStorage - HR Resume Matcher</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f8fafc;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #0f172a;
+      margin-top: 0;
+    }
+    button {
+      background: #14b8a6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #0d9488;
+    }
+    button.secondary {
+      background: #64748b;
+    }
+    button.secondary:hover {
+      background: #475569;
+    }
+    .info {
+      background: #f1f5f9;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 14px;
+      color: #475569;
+    }
+    .success {
+      background: #d1fae5;
+      color: #065f46;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      display: none;
+    }
+    .data-preview {
+      background: #f8fafc;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔧 LocalStorage Manager</h1>
+    
+    <div class="info">
+      <strong>Current Issue:</strong> Jobs are stored in localStorage but not syncing with the database properly.
+      This tool helps you clear the localStorage cache and force a fresh sync from the database.
+      <br><br>
+      <strong>When to use:</strong> If you see jobs in the matcher dropdown after clearing the database, use this tool to clear the localStorage cache.
+    </div>
+
+    <div id="dataPreview" class="data-preview"></div>
+
+    <button onclick="viewData()">View Current Data</button>
+    <button onclick="clearJobs()">Clear Jobs Only</button>
+    <button onclick="clearAll()" class="secondary">Clear All Data</button>
+    <button onclick="window.location.reload()" class="secondary">Refresh Page</button>
+
+    <div id="success" class="success"></div>
+  </div>
+
+  <script>
+    function viewData() {
+      const store = localStorage.getItem('client-store');
+      const preview = document.getElementById('dataPreview');
+      
+      if (!store) {
+        preview.textContent = 'No data found in localStorage';
+        return;
+      }
+
+      try {
+        const data = JSON.parse(store);
+        const summary = {
+          jobs: data.state?.jobs?.length || 0,
+          sessions: data.state?.sessions?.length || 0,
+          candidateStatuses: Object.keys(data.state?.candidateStatuses || {}).length,
+          darkMode: data.state?.darkMode,
+        };
+        
+        preview.innerHTML = `
+          <strong>LocalStorage Summary:</strong><br>
+          Jobs: ${summary.jobs}<br>
+          Sessions: ${summary.sessions}<br>
+          Candidate Statuses: ${summary.candidateStatuses}<br>
+          Dark Mode: ${summary.darkMode}<br><br>
+          <details>
+            <summary>Full Data (click to expand)</summary>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          </details>
+        `;
+      } catch (err) {
+        preview.textContent = 'Error parsing data: ' + err.message;
+      }
+    }
+
+    function clearJobs() {
+      const store = localStorage.getItem('client-store');
+      if (!store) {
+        showSuccess('No data to clear');
+        return;
+      }
+
+      try {
+        const data = JSON.parse(store);
+        if (data.state) {
+          data.state.jobs = [];
+          data.state.sessions = [];
+          localStorage.setItem('client-store', JSON.stringify(data));
+          showSuccess('Jobs and sessions cleared! Refresh the app to reload from database.');
+          viewData();
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function clearAll() {
+      if (confirm('This will clear ALL app data including settings. Continue?')) {
+        localStorage.removeItem('client-store');
+        showSuccess('All data cleared! Refresh the app to start fresh.');
+        document.getElementById('dataPreview').textContent = 'No data';
+      }
+    }
+
+    function showSuccess(message) {
+      const el = document.getElementById('success');
+      el.textContent = message;
+      el.style.display = 'block';
+      setTimeout(() => {
+        el.style.display = 'none';
+      }, 5000);
+    }
+
+    // Auto-load data on page load
+    window.onload = viewData;
+  </script>
+</body>
+</html>
