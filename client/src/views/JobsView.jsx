@@ -6,7 +6,17 @@ import {
 import { useAppStore } from '../store/useAppStore';
 import { getJobs, createJob, updateJobStatus, deleteJob, parseJobDescription, getSessions } from '../api/client';
 import ResultCard from '../components/ResultCard';
+import CandidateInsightsModal from '../components/CandidateInsightsModal';
 import toast from 'react-hot-toast';
+
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const QUICK_FILTERS = [
+  { id: 'today', label: 'Today' },
+  { id: 'yesterday', label: 'Yesterday' },
+  { id: 'thisWeek', label: 'This Week' },
+  { id: 'thisMonth', label: 'This Month' },
+];
 
 export default function JobsView() {
   const { darkMode } = useAppStore();
@@ -17,6 +27,12 @@ export default function JobsView() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
+
+  // Date filter state — the two groups are mutually exclusive.
+  // quickFilter: 'all' | 'today' | 'yesterday' | 'thisWeek' | 'thisMonth'
+  const [quickFilter, setQuickFilter] = useState('all');
+  const [filterYear, setFilterYear] = useState('');
+  const [filterMonth, setFilterMonth] = useState('');
 
   useEffect(() => {
     loadData();
@@ -72,12 +88,78 @@ export default function JobsView() {
 
   // Get sessions for selected job
   const getJobSessions = (jobId) => {
-    return sessions.filter(s => s.job_id === jobId).sort((a, b) => 
+    return sessions.filter(s => s.job_id === jobId).sort((a, b) =>
       new Date(b.created_at) - new Date(a.created_at)
     );
   };
 
-  const filteredJobs = jobs.filter(j => 
+  // Quick-filter select handler — choosing a quick filter clears the year/month group
+  const handleQuickFilterSelect = (id) => {
+    setQuickFilter((prev) => (prev === id ? 'all' : id));
+    setFilterYear('');
+    setFilterMonth('');
+  };
+
+  // Year/month change handler — choosing either clears the quick-filter group
+  const handleYearChange = (value) => {
+    setFilterYear(value);
+    setQuickFilter('all');
+  };
+
+  const handleMonthChange = (value) => {
+    setFilterMonth(value);
+    setQuickFilter('all');
+  };
+
+  const resetFilters = () => {
+    setQuickFilter('all');
+    setFilterYear('');
+    setFilterMonth('');
+  };
+
+  // Applies whichever filter group is active to a list of sessions
+  const applyDateFilters = (sessionList) => {
+    if (quickFilter === 'all' && !filterYear && !filterMonth) return sessionList;
+
+    return sessionList.filter((s) => {
+      const created = new Date(s.created_at);
+      if (isNaN(created.getTime())) return false;
+      const now = new Date();
+
+      if (quickFilter !== 'all') {
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        if (quickFilter === 'today') {
+          return created >= startOfToday;
+        }
+        if (quickFilter === 'yesterday') {
+          const startOfYesterday = new Date(startOfToday);
+          startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+          return created >= startOfYesterday && created < startOfToday;
+        }
+        if (quickFilter === 'thisWeek') {
+          // Calendar week starting Monday (enterprise standard: ISO-8601 week start)
+          const dayIdx = (now.getDay() + 6) % 7; // Mon=0 ... Sun=6
+          const startOfWeek = new Date(startOfToday);
+          startOfWeek.setDate(startOfWeek.getDate() - dayIdx);
+          return created >= startOfWeek;
+        }
+        if (quickFilter === 'thisMonth') {
+          // Calendar month: 1st of the current month to now
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          return created >= startOfMonth;
+        }
+        return true;
+      }
+
+      // Year / Month group
+      if (filterYear && created.getFullYear() !== parseInt(filterYear, 10)) return false;
+      if (filterMonth && created.getMonth() + 1 !== parseInt(filterMonth, 10)) return false;
+      return true;
+    });
+  };
+
+  const filteredJobs = jobs.filter(j =>
     searchQuery === '' ||
     j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     j.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -101,8 +183,17 @@ export default function JobsView() {
 
   // View: Job Sessions List
   if (selectedJob) {
-    const jobSessions = getJobSessions(selectedJob.id);
-    
+    const allJobSessions = getJobSessions(selectedJob.id);
+    const jobSessions = applyDateFilters(allJobSessions);
+    const availableYears = [...new Set(
+      allJobSessions
+        .map(s => new Date(s.created_at))
+        .filter(d => !isNaN(d.getTime()))
+        .map(d => d.getFullYear())
+    )].sort((a, b) => b - a);
+
+    const filtersActive = quickFilter !== 'all' || filterYear || filterMonth;
+
     return (
       <div className="p-6 max-w-7xl mx-auto space-y-5">
         {/* Back Button */}
@@ -153,14 +244,89 @@ export default function JobsView() {
           </div>
         </div>
 
+        {/* Date Filters */}
+        <div className={`${bg} p-4 space-y-4`}>
+          <div className="flex items-center justify-between">
+            <p className={`text-sm font-bold ${text}`}>Filter Sessions</p>
+            {filtersActive && (
+              <button
+                onClick={resetFilters}
+                className={`text-xs font-medium ${darkMode ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'}`}
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+
+          {/* Group 1: Quick relative filters */}
+          <div>
+            <p className={`text-xs font-medium mb-2 ${muted}`}>Quick Filter</p>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_FILTERS.map((opt) => {
+                const checked = quickFilter === opt.id;
+                return (
+                  <label
+                    key={opt.id}
+                    className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border cursor-pointer transition-colors select-none
+                      ${checked
+                        ? 'bg-teal-600 text-white border-teal-600'
+                        : darkMode ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => handleQuickFilterSelect(opt.id)}
+                      className="hidden"
+                    />
+                    {opt.label}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Group 2: Specific year / month */}
+          <div>
+            <p className={`text-xs font-medium mb-2 ${muted}`}>Specific Period</p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <select
+                value={filterYear}
+                onChange={(e) => handleYearChange(e.target.value)}
+                className={`text-sm px-3 py-1.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500
+                  ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`}
+              >
+                <option value="">All Years</option>
+                {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+
+              <select
+                value={filterMonth}
+                onChange={(e) => handleMonthChange(e.target.value)}
+                className={`text-sm px-3 py-1.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500
+                  ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`}
+              >
+                <option value="">All Months</option>
+                {MONTH_LABELS.map((m, i) => (
+                  <option key={i} value={i + 1}>{m}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
         {/* Sessions List */}
         <div>
           <h2 className={`text-lg font-bold mb-4 ${text}`}>Matching Sessions</h2>
           {jobSessions.length === 0 ? (
             <div className={`${bg} p-12 text-center`}>
               <Target className={`w-12 h-12 mx-auto mb-3 ${muted}`} />
-              <p className={`font-medium ${text}`}>No matching sessions yet</p>
-              <p className={`text-sm mt-1 ${muted}`}>Run a match from the Matcher tab to see results here</p>
+              <p className={`font-medium ${text}`}>
+                {filtersActive ? 'No sessions match this filter' : 'No matching sessions yet'}
+              </p>
+              <p className={`text-sm mt-1 ${muted}`}>
+                {filtersActive ? 'Try a different date range' : 'Run a match from the Matcher tab to see results here'}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
@@ -442,6 +608,7 @@ function SessionCard({ session, onClick, darkMode }) {
 function SessionDetailView({ session, onBack, darkMode }) {
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
 
   useEffect(() => {
     loadCandidates();
@@ -463,6 +630,18 @@ function SessionDetailView({ session, onBack, darkMode }) {
   const bg = `rounded-2xl border shadow-sm ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`;
   const text = darkMode ? 'text-white' : 'text-slate-900';
   const muted = darkMode ? 'text-slate-400' : 'text-slate-500';
+
+  // View-swap: renders the dashboard in the same content slot as this page
+  // (beside the sidebar, no position:fixed, no width guessing needed).
+  if (selectedCandidate) {
+    return (
+      <CandidateInsightsModal
+        candidate={selectedCandidate}
+        onClose={() => setSelectedCandidate(null)}
+        darkMode={darkMode}
+      />
+    );
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-5">
@@ -519,8 +698,8 @@ function SessionDetailView({ session, onBack, darkMode }) {
       ) : (
         <div className="space-y-3">
           {candidates.map((candidate, i) => {
-            const breakdown = typeof candidate.breakdown === 'string' 
-              ? JSON.parse(candidate.breakdown) 
+            const breakdown = typeof candidate.breakdown === 'string'
+              ? JSON.parse(candidate.breakdown)
               : candidate.breakdown;
             const strengths  = typeof candidate.strengths  === 'string' ? JSON.parse(candidate.strengths  || '[]') : (candidate.strengths  || []);
             const weaknesses = typeof candidate.weaknesses === 'string' ? JSON.parse(candidate.weaknesses || '[]') : (candidate.weaknesses || []);
@@ -538,9 +717,24 @@ function SessionDetailView({ session, onBack, darkMode }) {
               strengths,
               weaknesses,
               summary:    candidate.summary || '',
+              interviewFocusAreas: candidate.interviewFocusAreas || [],
+              interviewQuestions:  candidate.interviewQuestions || [],
+              topInterviewQuestions: candidate.topInterviewQuestions || [],
+              id:         candidate.id,
+              sessionId:  session.id,
             };
-            
-            return <ResultCard key={i} result={result} rank={i + 1} darkMode={darkMode} />;
+
+            return (
+              <ResultCard
+                key={i}
+                result={result}
+                rank={i + 1}
+                darkMode={darkMode}
+                sessionId={session.id}
+                jobTitle={session.job_title}
+                onSelect={setSelectedCandidate}
+              />
+            );
           })}
         </div>
       )}

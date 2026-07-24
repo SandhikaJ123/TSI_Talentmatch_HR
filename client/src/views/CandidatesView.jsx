@@ -25,6 +25,25 @@ const GRADE_COLORS = {
   red:     'text-red-500',
 };
 
+// Reads a list field that may arrive as either shape depending on backend version:
+//   - new backend (routes/candidates.py, patched): already a camelCase parsed array
+//   - old backend: a snake_case JSON-string column
+// Tries the camelCase key first (already-parsed array), then falls back to the
+// snake_case key (parsing it if it's still a JSON string), then [].
+function readListField(c, camelKey, snakeKey) {
+  if (Array.isArray(c[camelKey])) return c[camelKey];
+  const raw = c[snakeKey];
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return Array.isArray(raw) ? raw : [];
+}
+
 export default function CandidatesView() {
   const { candidateStatuses, setCandidateStatus, darkMode } = useAppStore();
   const [candidates, setCandidates] = useState([]);
@@ -68,12 +87,11 @@ export default function CandidatesView() {
       strengths,
       weaknesses,
       summary:    c.summary || '',
-      interviewFocusAreas: typeof c.interview_focus_areas === 'string'
-        ? JSON.parse(c.interview_focus_areas || '[]')
-        : (c.interview_focus_areas || []),
-      interviewQuestions: typeof c.interview_questions === 'string'
-        ? JSON.parse(c.interview_questions || '[]')
-        : (c.interview_questions || []),
+      interviewFocusAreas: readListField(c, 'interviewFocusAreas', 'interview_focus_areas'),
+      interviewQuestions: readListField(c, 'interviewQuestions', 'interview_questions'),
+      // Was missing entirely before — this is why "Relevant interview questions" never
+      // showed up when opening a candidate from the Resumes page.
+      topInterviewQuestions: readListField(c, 'topInterviewQuestions', 'top_interview_questions'),
       sessionId:  c.session_id,
       jobTitle:   c.job_title || 'Untitled',
       title:      c.title || '',

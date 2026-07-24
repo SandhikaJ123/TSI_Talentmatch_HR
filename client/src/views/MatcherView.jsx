@@ -6,6 +6,7 @@ import {
 import FileDropZone from '../components/FileDropZone';
 import PreferencesPanel from '../components/PreferencesPanel';
 import ResultCard from '../components/ResultCard';
+import CandidateInsightsModal from '../components/CandidateInsightsModal';
 import JobPostingModal from '../components/JobPostingModal';
 import { useAppStore } from '../store/useAppStore';
 import { submitMatch } from '../api/client';
@@ -43,6 +44,7 @@ export default function MatcherView() {
   const [semanticEnabled, setSemanticEnabled] = useState(false);
   const [parseErrors, setParseErrors] = useState([]);
   const [showJobModal, setShowJobModal] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
 
   // Load jobs from backend when component mounts (always sync with DB)
   useEffect(() => {
@@ -184,6 +186,19 @@ const customWeightTotal =
   const muted = darkMode ? 'text-slate-400' : 'text-slate-500';
   const inputCls = `w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500
     ${darkMode ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' : 'bg-white border-slate-200 text-slate-800'}`;
+
+  // View-swap: same pattern as JobsView's SessionDetailView. Keeps the candidate
+  // dashboard in the normal in-flow page slot (beside the sidebar, respecting its
+  // collapse state) instead of ResultCard's fallback position:fixed overlay.
+  if (selectedCandidate) {
+    return (
+      <CandidateInsightsModal
+        candidate={selectedCandidate}
+        onClose={() => setSelectedCandidate(null)}
+        darkMode={darkMode}
+      />
+    );
+  }
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-5">
@@ -433,7 +448,7 @@ const customWeightTotal =
           </div>
 
           <div className="space-y-3">
-            {results.map((result, i) => <ResultCard key={i} result={result} rank={i + 1} darkMode={darkMode} />)}
+            {results.map((result, i) => <ResultCard key={i} result={result} rank={i + 1} darkMode={darkMode} jobTitle={jobTitle} onSelect={setSelectedCandidate} />)}
           </div>
 
           <div className="flex justify-center gap-3 pb-8 flex-wrap">
