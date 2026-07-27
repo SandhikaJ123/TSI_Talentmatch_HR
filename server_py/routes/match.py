@@ -6,9 +6,9 @@ Endpoint:
     - resumes[]          one or more resume files (PDF/DOCX/TXT, up to 50)
     - requirements       optional JD file
     - requirementsText   optional JD plain text
-    - jobId              optional saved job ID (loads stored embedding)
-    - jobTitle           optional session label
-    - preferences        JSON weights for skills / experience / education / overall
+    - jobId               optional saved job ID (loads stored embedding)
+    - jobTitle            optional session label
+    - preferences         JSON weights for skills / experience / education / overall
 
 Flow: extract text → hybrid match (NLP + semantic) → persist session &
 candidates to SQLite → return ranked results with session ID.
@@ -145,9 +145,9 @@ async def match_resumes(
                 final_score,grade_label,grade_color,
                 breakdown,title,location,email,phone,
                 strengths,weaknesses,summary,
-                interview_focus_areas,interview_questions,
+                interview_focus_areas,interview_questions,top_interview_questions,
                 embedding,embedding_model)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 str(uuid.uuid4()), session_id, c["name"], c["fileName"],
                 resume.get("fileSize", 0),
@@ -160,6 +160,7 @@ async def match_resumes(
                 c.get("summary"),
                 json.dumps(c.get("interviewFocusAreas", [])),
                 json.dumps(c.get("interviewQuestions", [])),
+                json.dumps(c.get("topInterviewQuestions", [])),
                 vector_to_bytes(vec) if vec else None,
                 "text-embedding-3-small" if vec else None,
             ),

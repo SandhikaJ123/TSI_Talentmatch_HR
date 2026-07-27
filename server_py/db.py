@@ -59,8 +59,9 @@ class _ConnWrapper:
 #   BLOB              -> BYTEA
 #   TEXT DEFAULT (datetime('now'))  -> TIMESTAMPTZ DEFAULT now()
 #   the columns that were previously added via ALTER TABLE migrations
-#   (primary_techstack, interview_questions, interview_focus_areas) are now
-#   part of the base CREATE TABLE, so no migration step is needed.
+#   (primary_techstack, interview_questions, interview_focus_areas,
+#   top_interview_questions) are now part of the base CREATE TABLE, so no
+#   migration step is needed.
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
     id                  TEXT PRIMARY KEY,
@@ -95,37 +96,42 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 CREATE TABLE IF NOT EXISTS candidates (
-    id                    TEXT PRIMARY KEY,
-    session_id            TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-    name                  TEXT NOT NULL,
-    file_name             TEXT NOT NULL,
-    file_size             INTEGER,
-    raw_text              TEXT,
-    final_score           INTEGER NOT NULL,
-    grade_label           TEXT,
-    grade_color           TEXT,
-    breakdown             TEXT NOT NULL,
-    title                 TEXT,
-    location              TEXT,
-    email                 TEXT,
-    phone                 TEXT,
-    strengths             TEXT DEFAULT '[]',
-    weaknesses            TEXT DEFAULT '[]',
-    summary               TEXT,
-    primary_techstack     TEXT,
-    interview_questions   TEXT DEFAULT '[]',
-    interview_focus_areas TEXT DEFAULT '[]',
-    embedding             BYTEA,
-    embedding_model       TEXT,
-    status                TEXT DEFAULT 'new',
-    notes                 TEXT,
-    created_at            TIMESTAMPTZ DEFAULT now(),
-    updated_at            TIMESTAMPTZ DEFAULT now()
+    id                     TEXT PRIMARY KEY,
+    session_id             TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    name                   TEXT NOT NULL,
+    file_name              TEXT NOT NULL,
+    file_size              INTEGER,
+    raw_text               TEXT,
+    final_score            INTEGER NOT NULL,
+    grade_label            TEXT,
+    grade_color            TEXT,
+    breakdown              TEXT NOT NULL,
+    title                  TEXT,
+    location               TEXT,
+    email                  TEXT,
+    phone                  TEXT,
+    strengths              TEXT DEFAULT '[]',
+    weaknesses             TEXT DEFAULT '[]',
+    summary                TEXT,
+    primary_techstack      TEXT,
+    interview_questions    TEXT DEFAULT '[]',
+    interview_focus_areas  TEXT DEFAULT '[]',
+    top_interview_questions TEXT DEFAULT '[]',
+    embedding              BYTEA,
+    embedding_model        TEXT,
+    status                 TEXT DEFAULT 'new',
+    notes                  TEXT,
+    created_at             TIMESTAMPTZ DEFAULT now(),
+    updated_at             TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_candidates_session ON candidates(session_id);
 CREATE INDEX IF NOT EXISTS idx_candidates_status  ON candidates(status);
 CREATE INDEX IF NOT EXISTS idx_sessions_job       ON sessions(job_id);
+
+-- Safe to run every time: adds the column if this DB was created before
+-- top_interview_questions existed in the base schema above.
+ALTER TABLE candidates ADD COLUMN IF NOT EXISTS top_interview_questions TEXT DEFAULT '[]';
 """
 
 

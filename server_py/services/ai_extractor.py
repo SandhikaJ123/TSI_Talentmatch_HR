@@ -27,6 +27,7 @@ _openai_client = None
 _anthropic_client = None
 MAX_EVIDENCE_LENGTH = 300
 _NO_USAGE = {"input": 0, "output": 0, "total": 0, "elapsed": 0.0}
+DIFFICULTY_LEVELS = ("easy", "medium", "hard")
 
 
 def _get_provider() -> str:
@@ -134,6 +135,35 @@ def _normalize_custom_criteria_result(raw: list | None, custom_criteria: list[di
 
     return normalized
 
+
+def _normalize_questions_with_difficulty(raw: list | None, expected_count: int = 30) -> list[dict]:
+    """
+    Validates/normalizes an interview-questions array into a list of
+    {"question": str, "difficulty": "easy"|"medium"|"hard"} objects.
+
+    Tolerates the model returning plain strings instead of objects (defaults those to "medium"),
+    drops empty/malformed entries, and never raises — worst case returns an empty list, which the
+    caller/UI already treats as "no questions for this candidate".
+    """
+    raw_list = raw if isinstance(raw, list) else []
+    normalized = []
+    for item in raw_list:
+        if isinstance(item, dict):
+            question = str(item.get("question", "")).strip()
+            difficulty = str(item.get("difficulty", "medium")).strip().lower()
+            if difficulty not in DIFFICULTY_LEVELS:
+                difficulty = "medium"
+        elif isinstance(item, str):
+            question = item.strip()
+            difficulty = "medium"
+        else:
+            continue
+
+        if question:
+            normalized.append({"question": question, "difficulty": difficulty})
+
+    return normalized
+
 _EXTRACTION_PROMPT = """You are an expert HR recruiter. Analyze this candidate's resume against the job requirements.
 
 JOB REQUIREMENTS:
@@ -177,11 +207,25 @@ Return ONLY valid JSON with these exact fields:
     "Base these ENTIRELY on the missing skills list and score breakdown above — do NOT invent gaps"
   ],
   "interviewQuestions": [
-    "Generate exactly 10 interview questions",
+    "Generate exactly 30 interview questions total, each an object: {{\\"question\\": \\"...\\", \\"difficulty\\": \\"easy\\"|\\"medium\\"|\\"hard\\"}}",
+    "Generate exactly 10 easy, 10 medium, and 10 hard questions — a FULL independent set of 10 at each level, not a small sample per level",
     "ALL questions must target the interviewFocusAreas above — probe each gap or missing qualification directly",
-    "Example: 'The role requires Kubernetes. Walk me through your hands-on production experience with container orchestration'",
-    "Example: 'Your resume does not reference AWS. How would you get up to speed with our AWS-based infrastructure?'",
+    "'easy' = surfaces basic awareness of the gap (e.g. 'Have you had any exposure to Kubernetes, even briefly?')",
+    "'medium' = probes how they'd approach closing the gap in practice (e.g. 'How would you ramp up on our AWS-based infra in the first 30 days?')",
+    "'hard' = pressure-tests the gap under a realistic, high-stakes scenario (e.g. 'Our container orchestration fails in production at 2am — walk me through your response with no prior hands-on experience')",
+    "Within each difficulty level, vary the missing skill/gap each question targets — do not repeat the same gap 10 times",
     "Do NOT ask generic questions — every question must address a specific missing skill or fitness gap"
+  ],
+  "topInterviewQuestions": [
+    "Generate exactly 30 interview questions total, each an object: {{\\"question\\": \\"...\\", \\"difficulty\\": \\"easy\\"|\\"medium\\"|\\"hard\\"}}",
+    "Generate exactly 10 easy, 10 medium, and 10 hard questions — a FULL independent set of 10 at each level, not a small sample per level — to VALIDATE this candidate's strongest, ALREADY-DEMONSTRATED skills from the resume",
+    "Base these on the MATCHED skills list and the candidate's actual work history — NOT on gaps or missing skills",
+    "'easy' = confirms surface familiarity/basics of a claimed skill",
+    "'medium' = probes a real project where they applied the skill and the trade-offs they made",
+    "'hard' = a senior-level, open-ended design/scenario question that tests true depth and judgment, not just recall",
+    "Within each difficulty level, vary the matched skill each question targets — do not repeat the same skill 10 times",
+    "Example 'hard': 'Your resume shows 5 years of React experience — design the state-management architecture for a real-time collaborative editor and justify every trade-off'",
+    "This is a DIFFERENT list from interviewQuestions above: this one validates strengths, interviewQuestions probes gaps"
   ],
   "customCriteria": []
 }}
@@ -252,7 +296,8 @@ def _parse_result(raw: str, custom_criteria: list[dict] | None) -> dict:
         "weaknesses": result.get("weaknesses") if isinstance(result.get("weaknesses"), list) else [],
         "summary":   (result.get("summary") or "").strip(),
         "interviewFocusAreas": result.get("interviewFocusAreas") if isinstance(result.get("interviewFocusAreas"), list) else [],
-        "interviewQuestions": result.get("interviewQuestions") if isinstance(result.get("interviewQuestions"), list) else [],
+        "interviewQuestions": _normalize_questions_with_difficulty(result.get("interviewQuestions")),
+        "topInterviewQuestions": _normalize_questions_with_difficulty(result.get("topInterviewQuestions")),
         "customCriteria": _normalize_custom_criteria_result(result.get("customCriteria"), custom_criteria),
     }
 
@@ -263,7 +308,7 @@ async def _extract_openai(prompt: str, custom_criteria: list[dict] | None, filen
         model=os.getenv("OPENAI_AI_MODEL", "gpt-4o-mini"),
         messages=[{"role": "user", "content": prompt}],
         temperature=float(os.getenv("AI_TEMPERATURE", "0.2")),
-        max_tokens=int(os.getenv("AI_MAX_TOKENS", "1500")),
+        max_tokens=int(os.getenv("AI_MAX_TOKENS", "6000")),
         response_format={"type": "json_object"},
     )
     elapsed = time.perf_counter() - t0
@@ -281,7 +326,7 @@ async def _extract_anthropic(prompt: str, custom_criteria: list[dict] | None, fi
     t0 = time.perf_counter()
     resp = await _get_anthropic_client().messages.create(
         model=os.getenv("AI_MODEL", "claude-haiku-4-5-20251001"),
-        max_tokens=int(os.getenv("AI_MAX_TOKENS", "1500")),
+        max_tokens=int(os.getenv("AI_MAX_TOKENS", "6000")),
         temperature=float(os.getenv("AI_TEMPERATURE", "0.2")),
         messages=[{"role": "user", "content": prompt}],
     )
@@ -355,18 +400,113 @@ def _nlp_fallback_extraction(resume_text: str, job_requirements: str, breakdown:
         for s in missing[:5]
     ]
 
-    # Interview questions — gap-focused, aligned with focus areas
-    gap_questions = []
-    for s in missing[:5]:
-        gap_questions.append(f"The role requires {s}. Can you describe any experience you have with it, even indirectly?")
-    generic_gap = [
-        "Walk me through a situation where you had to quickly learn a technology that was new to you.",
-        "How would you approach getting up to speed with skills this role requires that you haven't used before?",
-        "Describe a time you had to close a skill gap under a tight deadline.",
-        "What is your plan for developing proficiency in the areas where this role's requirements exceed your current experience?",
-        "How do you stay current with technologies and tools relevant to this field?",
+    # Interview questions — gap-focused, aligned with focus areas.
+    # No AI judgement is available here, so difficulty is assigned heuristically by question
+    # intent (awareness → approach → high-pressure scenario), and each level is padded out to a
+    # full 10 with generic-but-relevant fallbacks when there aren't 10 distinct missing skills.
+    def _fill_to_ten(skill_questions: list[str], generic_bank: list[str]) -> list[str]:
+        combined = list(skill_questions)
+        for q in generic_bank:
+            if len(combined) >= 10:
+                break
+            combined.append(q)
+        return combined[:10]
+
+    gap_easy = [f"Have you had any hands-on exposure to {s}, even briefly or in a side project?" for s in missing]
+    gap_medium = [f"The role requires {s}. How would you approach ramping up on it in your first 30-60 days?" for s in missing]
+    gap_hard = [f"Imagine {s} is critical to a production incident on day one. Walk me through how you'd handle it with no prior hands-on experience." for s in missing]
+
+    generic_gap_easy = [
+        "Which of this role's required tools or technologies are you least familiar with today?",
+        "How do you typically stay current with technologies relevant to this field?",
+        "What's your comfort level with the parts of this role's tech stack you haven't used professionally?",
+        "Tell me about a tool or skill from the job requirements you've only used casually so far.",
+        "How do you usually approach a technology you've never worked with before?",
+        "What resources would you turn to first if asked to learn a required skill quickly?",
+        "Is there a requirement in this job posting you'd want more context on before an offer?",
+        "How comfortable are you asking for help early when you hit an unfamiliar gap?",
+        "What's one area of this role you'd want a mentor's guidance on early?",
+        "Which requirement in this posting feels the furthest from your current experience?",
     ]
-    interview_questions = (gap_questions + generic_gap)[:10]
+    generic_gap_medium = [
+        "Walk me through a situation where you had to quickly learn a technology that was new to you.",
+        "What's your plan for closing the skill gaps between your background and this role's requirements?",
+        "Describe how you'd structure your first month to get productive despite a skill gap.",
+        "Tell me about a time you had to rely on documentation and self-teaching to hit a deadline.",
+        "How would you validate that you've actually closed a skill gap, not just read about it?",
+        "What would 'good progress' look like after 60 days if you're starting from a gap in this area?",
+        "How do you decide when to ask for help versus push through a gap yourself?",
+        "Describe a project where the requirements outpaced your existing skill set.",
+        "How would you communicate to your manager that you're still ramping up on a required skill?",
+        "What's a skill you've closed a gap on before, and how long did it realistically take?",
+    ]
+    generic_gap_hard = [
+        "Describe the hardest skill gap you've had to close under a tight deadline, and what you'd do differently.",
+        "If hired, what's the single biggest technical risk you personally bring to this team, and how would you mitigate it?",
+        "Walk me through how you'd design a rollback plan for a system built on a technology you're still learning.",
+        "Tell me about a time a skill gap caused a real production or business impact — what happened and what changed after?",
+        "How would you make a high-stakes architectural decision in an area where you have limited prior experience?",
+        "If this gap turned out to be much deeper than expected 3 months in, how would you handle that conversation with your team?",
+        "Design a plan to lead a project in this gap area within 6 months — what has to be true for that to work?",
+        "What's your process for making an irreversible decision in a domain you're still building expertise in?",
+        "Describe how you'd audit your own work in an unfamiliar area to catch mistakes before they ship.",
+        "If two experts disagreed on the right approach in this gap area, how would you evaluate their arguments?",
+    ]
+
+    interview_questions = (
+        [{"question": q, "difficulty": "easy"} for q in _fill_to_ten(gap_easy, generic_gap_easy)]
+        + [{"question": q, "difficulty": "medium"} for q in _fill_to_ten(gap_medium, generic_gap_medium)]
+        + [{"question": q, "difficulty": "hard"} for q in _fill_to_ten(gap_hard, generic_gap_hard)]
+    )
+
+    # Top interview questions — validate demonstrated strengths (matched skills),
+    # the opposite orientation of the gap questions above, same fill-to-10 approach.
+    top_easy = [f"Can you confirm your hands-on familiarity with {s} — how recently and how often have you used it?" for s in matched]
+    top_medium = [f"Walk me through a real project where you applied {s} — what was your specific role and what challenges came up?" for s in matched]
+    top_hard = [f"Design a system that relies heavily on {s} for a problem similar to this role, and justify the trade-offs in your approach." for s in matched]
+
+    generic_top_easy = [
+        "Which part of your background do you feel most confident speaking to in depth?",
+        "Tell me about the most recent project where you used your strongest technical skill.",
+        "What's a tool or skill you consider yourself genuinely strong in?",
+        "How did you first develop the skill you're proudest of on your resume?",
+        "What would a past manager say is your strongest technical area?",
+        "Which of your listed skills would you be comfortable teaching to someone else?",
+        "What's a project that best represents your strongest skill set?",
+        "How do you keep that strongest skill sharp over time?",
+        "What's the most recent thing you learned that built on a skill you already had?",
+        "Which skill on your resume took the longest to actually become confident in?",
+    ]
+    generic_top_medium = [
+        "Tell me about the most technically challenging problem you've solved recently and how you approached it.",
+        "Describe a time you had to make a difficult trade-off between speed and quality. How did you decide?",
+        "Walk me through a project where your strongest skill directly drove the outcome.",
+        "What's a mistake you made using this skill, and what did you learn from it?",
+        "How do you decide when your strongest skill isn't the right tool for a problem?",
+        "Tell me about a time you had to explain this skill area to a non-technical stakeholder.",
+        "Describe how you've mentored or supported someone else developing this skill.",
+        "What's a constraint (time, budget, team) that forced you to apply this skill differently than usual?",
+        "How has your approach to this skill changed over the past couple of years?",
+        "What's a case where relying on this skill alone wasn't enough to solve the problem?",
+    ]
+    generic_top_hard = [
+        "Walk me through how you'd design a system for a problem similar to what this role involves.",
+        "What's a decision from a past project you'd make differently today, and why?",
+        "Design the architecture for a significantly larger-scale version of a project you've shipped — what breaks first?",
+        "Defend a controversial technical decision you made that others on your team disagreed with.",
+        "If you had to remove your strongest skill from your toolkit tomorrow, how would you solve the same problems?",
+        "Walk me through debugging a subtle, hard-to-reproduce failure in a system built on this skill.",
+        "How would you evaluate whether your strongest skill has become a blind spot for you?",
+        "Design a system where getting this skill wrong would be catastrophic — what safeguards would you build in?",
+        "What's the most sophisticated real-world use of this skill you've personally implemented?",
+        "How would you teach a senior engineer something non-obvious about this skill that took you years to learn?",
+    ]
+
+    top_interview_questions = (
+        [{"question": q, "difficulty": "easy"} for q in _fill_to_ten(top_easy, generic_top_easy)]
+        + [{"question": q, "difficulty": "medium"} for q in _fill_to_ten(top_medium, generic_top_medium)]
+        + [{"question": q, "difficulty": "hard"} for q in _fill_to_ten(top_hard, generic_top_hard)]
+    )
 
     # Custom criteria — keyword presence check
     normalized_custom = []
@@ -394,6 +534,7 @@ def _nlp_fallback_extraction(resume_text: str, job_requirements: str, breakdown:
         "summary": summary,
         "interviewFocusAreas": interview_focus_areas,
         "interviewQuestions": interview_questions,
+        "topInterviewQuestions": top_interview_questions,
         "customCriteria": normalized_custom,
     }
 
@@ -478,7 +619,7 @@ async def extract_candidate_info_batch(
             results.append({
                 "name": r["name"], "title": "", "location": "", "email": "", "phone": "",
                 "strengths": [], "weaknesses": [], "summary": "",
-                "interviewFocusAreas": [], "interviewQuestions": [],
+                "interviewFocusAreas": [], "interviewQuestions": [], "topInterviewQuestions": [],
                 "customCriteria": _normalize_custom_criteria_result(None, custom_criteria),
             })
         else:

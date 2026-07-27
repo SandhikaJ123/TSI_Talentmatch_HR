@@ -8,6 +8,7 @@ Run directly with `python main.py` or via uvicorn for hot-reload.
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -24,11 +25,24 @@ from routes.candidates import router as candidates_router
 from routes.analytics import router as analytics_router
 from routes.ai_insights import router as ai_insights_router
 from routes.data import router as data_router
+from routes.auth import router as auth_router
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="Resume Matcher API", version="1.0.0", redirect_slashes=False)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Session cookie support for Entra ID (Azure AD) SSO — routes/auth.py stores
+# {name, email, oid} here after a successful sign-in. Must be added before
+# CORSMiddleware below so CORS ends up as the outermost layer and still
+# applies correctly to session-backed responses (including the redirects
+# auth.py issues during login/callback).
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SESSION_SECRET_KEY", ""),
+    same_site="lax",
+    https_only=False,  # set to True once this runs behind HTTPS in production
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,6 +52,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router,        prefix="/api/auth")
 app.include_router(jobs_router,        prefix="/api/jobs")
 app.include_router(match_router,       prefix="/api/match")
 app.include_router(sessions_router,    prefix="/api/sessions")

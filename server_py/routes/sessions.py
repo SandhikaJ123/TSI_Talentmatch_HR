@@ -27,6 +27,18 @@ def _parse_candidate(row) -> dict:
     r = dict(row)
     if isinstance(r.get("breakdown"), str):
         r["breakdown"] = json.loads(r["breakdown"] or "{}")
+
+    # The DB stores these as snake_case JSON-string columns
+    # (interview_focus_areas, interview_questions), but the frontend's
+    # ResultCard component expects camelCase parsed arrays
+    # (interviewFocusAreas, interviewQuestions) — same shape it already
+    # gets from the live /api/match response. Without this conversion,
+    # candidates viewed through a past session silently lose these two
+    # sections even though the data exists in the database.
+    r["interviewFocusAreas"] = json.loads(r.pop("interview_focus_areas", None) or "[]")
+    r["interviewQuestions"] = json.loads(r.pop("interview_questions", None) or "[]")
+    r["topInterviewQuestions"] = json.loads(r.pop("top_interview_questions", None) or "[]")
+
     r.pop("embedding", None)
     return r
 

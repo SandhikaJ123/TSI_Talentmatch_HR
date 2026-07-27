@@ -124,6 +124,15 @@ async def generate_interview_pdf(request: Request):
     name = str(body.get("name", "Candidate"))
     questions = body.get("interviewQuestions") or []
     focus_areas = body.get("interviewFocusAreas") or []
+    # The frontend now tells us which panel triggered this (Relevant/Top questions vs
+    # Gap-Focused questions) via title/documentTitle. Previously this section heading was
+    # hardcoded to "Gap-Focused Interview Questions" regardless of which panel's Save PDF
+    # button was clicked, so a "Relevant interview questions" download would render the
+    # wrong heading. Fall back to the old hardcoded string only if neither field is sent,
+    # so older frontend builds still get a sane heading instead of an empty one.
+    section_title = str(
+        body.get("documentTitle") or body.get("title") or "Gap-Focused Interview Questions"
+    ).strip()
 
     if not questions:
         raise HTTPException(400, "No interview questions provided")
@@ -163,7 +172,7 @@ async def generate_interview_pdf(request: Request):
 
         # Questions section
         pdf.set_font("Helvetica", "B", 12)
-        pdf.cell(0, 8, "Gap-Focused Interview Questions", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 8, _safe(section_title), new_x="LMARGIN", new_y="NEXT")
         pdf.ln(1)
         pdf.set_font("Helvetica", "", 11)
         for i, q in enumerate(questions, 1):

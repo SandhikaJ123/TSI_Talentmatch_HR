@@ -92,14 +92,6 @@ SKILL_SYNONYMS = {
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _extract_work_section(text: str) -> str:
-    """
-    Extract only the work/experience section from resume text.
-    Prevents education or project date ranges from inflating experience years.
-    Strategy:
-      1. Find a work-section header line → take text from there to next section header.
-      2. No work header found → take text before the first education/project/skills header.
-      3. Nothing found → return full text as fallback.
-    """
     work_header = re.compile(
         r'(?:^|\n)\s*(?:professional\s+)?(?:work\s+)?experience|employment(?:\s+history)?|work\s+history',
         re.I
@@ -117,7 +109,6 @@ def _extract_work_section(text: str) -> str:
         end_m = section_end.search(text, work_m.end())
         return text[start: end_m.start() if end_m else len(text)]
 
-    # No explicit work header — take everything before education/projects
     end_m = section_end.search(text)
     if end_m:
         return text[:end_m.start()]
@@ -130,7 +121,6 @@ def _extract_years(text: str) -> float:
     best = 0.0
     now = datetime.date.today()
 
-    # 1. Explicit month mentions anywhere in text ("10 months of experience")
     for pat in EXP_MONTH_PATTERNS:
         for m in pat.finditer(text):
             val = int(m.group(1))
@@ -138,18 +128,15 @@ def _extract_years(text: str) -> float:
             if y > best and val < 600:
                 best = y
 
-    # 2. Explicit year mentions anywhere in text ("5 years of experience")
     for pat in EXP_PATTERNS:
         for m in pat.finditer(text):
             y = int(m.group(1))
             if y > best and y < 50:
                 best = float(y)
 
-    # 3. Date-range parsing — only within the work experience section
     work_text = _extract_work_section(text)
     total_months = 0
 
-    # Format A: "Aug 2025 – Present" / "Jul 2024 – Aug 2024" / "Jan 2024 to Mar 2024"
     pat_a = re.compile(
         r"(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{4})"
         r"\s*(?:[-–—]|to)\s*"
@@ -172,7 +159,6 @@ def _extract_years(text: str) -> float:
         except Exception:
             continue
 
-    # Format B: "08/2025 – Present" or "07/2024 – 08/2024"
     pat_b = re.compile(
         r"(0?[1-9]|1[0-2])[/\-](20\d{2})\s*(?:[-–—]|to)\s*"
         r"(?:(0?[1-9]|1[0-2])[/\-](20\d{2})|(present|current|now))",
@@ -193,7 +179,6 @@ def _extract_years(text: str) -> float:
         except Exception:
             continue
 
-    # Format C: "2024 – Present" or "2024 – 2025" (year only, within work section)
     pat_c = re.compile(
         r"(?<!\d)(20\d{2})\s*(?:[-–—]|to)\s*(20\d{2}|present|current|now)(?!\d)",
         re.I
@@ -210,7 +195,6 @@ def _extract_years(text: str) -> float:
         except Exception:
             continue
 
-    # Month-precise total takes priority over year-only total
     date_months = total_months if total_months > 0 else year_only_months
     date_years = round(date_months / 12, 1)
     if date_years > best:
@@ -399,6 +383,7 @@ async def _match_resumes_nlp(req_text: str, resumes: list[dict], prefs: dict) ->
             "summary":   ai.get("summary", ""),
             "interviewFocusAreas": ai.get("interviewFocusAreas", []),
             "interviewQuestions": ai.get("interviewQuestions", []),
+            "topInterviewQuestions": ai.get("topInterviewQuestions", []),
         })
 
     return sorted(results, key=lambda x: x["finalScore"], reverse=True)
