@@ -1,5 +1,6 @@
 import { Toaster } from 'react-hot-toast';
 import { useAppStore } from './store/useAppStore';
+import AuthGate from './components/AuthGate';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
 import DashboardView from './views/DashboardView';
@@ -21,7 +22,7 @@ export default function App() {
   const ActiveView = VIEWS[activeView] ?? DashboardView;
 
   return (
-    <div className={`flex h-screen overflow-hidden ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
+    <>
       <Toaster
         position="top-right"
         toastOptions={{
@@ -35,14 +36,20 @@ export default function App() {
         }}
       />
 
-      <Sidebar />
+      {/* Nothing below renders until /api/auth/me confirms an active Entra ID
+          session — AuthGate shows a "Sign in with Microsoft" screen instead. */}
+      <AuthGate>
+        <div className={`flex h-screen overflow-hidden ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
+          <Sidebar />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar />
-        <main className={`flex-1 overflow-y-auto ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
-          <ActiveView />
-        </main>
-      </div>
-    </div>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <TopBar />
+            <main className={`flex-1 overflow-y-auto ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
+              <ActiveView />
+            </main>
+          </div>
+        </div>
+      </AuthGate>
+    </>
   );
 }
